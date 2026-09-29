@@ -165,7 +165,7 @@ def read_matrix() -> list:
     rows = []
     for i in range(3):
         while True:
-            parts = input(f"  Baris {r + 1} (3 angka dipisah spasi): ").split()
+            parts = input(f"  Baris {i + 1} (3 angka dipisah spasi): ").split()   # versi mei: sebelumnya {r + 1} (r tidak didefinisikan)
             try:
                 if len(parts) != 3:
                     raise ValueError
@@ -204,7 +204,7 @@ def run_main(client: Client):
 
 def run_auto(client: Client, delay: float) :
     """Mode otomatis: kirim request acak tiap `delay` detik, sampai server shutdown."""
-    samples = ["Hello World", "KOMB JAYA", "DIKE To The World"
+    samples = ["Hello World", "KOMB JAYA", "DIKE To The World",   # versi mei: koma ditambahkan (sebelumnya hilang)
                "Pecinta  Jamu", "MIPA Alim", "Kopi \u2615 enak", ""]
 
     n = 0
@@ -218,3 +218,66 @@ def run_auto(client: Client, delay: float) :
         print(f"\n#{n} {LABELS[svc]}  payload={payload}")
         client.call(svc, payload)
         time.sleep(delay)
+
+
+# Versi Mei: Menambahkan fungsi main()
+def main() -> int:
+    # main() mengembalikan kode keluar (exit code) program:
+    #   0 = normal (keluar biasa / server shutdown), 1 = masalah jaringan, 2 = pelanggaran protokol
+    # 1) Baca argumen dari command line
+    ap = argparse.ArgumentParser(description="Klien protokol layanan string & matriks (NDJSON over TCP)")
+    ap.add_argument("--host", default="127.0.0.1", help="alamat server (default: 127.0.0.1)")
+    ap.add_argument("--port", type=int, default=P.DEFAULT_PORT, help="port server (default: dari protocol.py)")
+    ap.add_argument("--timeout", type=float, default=10.0, help="timeout socket dalam detik (default: 10)")
+    ap.add_argument("--auto", action="store_true", help="kirim permintaan acak otomatis")
+    ap.add_argument("--delay", type=float, default=0.2, help="jeda antar permintaan mode auto (default: 0.2)")
+    args = ap.parse_args()
+ 
+    # 2) Validasi argumen; ap.error() mencetak pesan lalu keluar dengan kode 2
+    if not (1 <= args.port <= 65535):
+        ap.error("--port harus di antara 1 dan 65535")
+    if args.delay < 0 or args.timeout <= 0:
+        ap.error("--delay tidak boleh negatif dan --timeout harus > 0")
+ 
+    # client diisi None dulu supaya blok `finally` aman dipakai walau koneksi gagal dibuat
+    client = None
+    try:
+        # 3) Hubungkan ke server (di sini server_hello langsung dibaca oleh Client.__init__)
+        client = Client(args.host, args.port, timeout=args.timeout)
+        print(f"Terhubung ke {args.host}:{args.port}")
+        # 4) Pilih mode: otomatis (request acak) atau menu interaktif
+        if args.auto:
+            run_auto(client, args.delay)
+        else:
+            run_main(client)
+    # 5) Penanganan error; urutan except penting (yang lebih spesifik ditulis lebih dulu)
+    except ServerShutdown as exc:         # server berhenti / semua layanan nonaktif -> bukan error, exit 0
+        print(f"\n[SERVER BERHENTI] {exc}")
+    except ConnectionClosed as exc:       # server menutup koneksi (EOF) di tengah jalan
+        print(f"\n[KONEKSI TERPUTUS] {exc}")
+        return 1
+    except ProtocolError as exc:          # pesan server melanggar aturan protokol
+        print(f"\n[PELANGGARAN PROTOKOL] {exc}")
+        return 2
+    except ConnectionRefusedError:        # port tertutup / server belum dijalankan
+        print(f"\n[DITOLAK] Tidak ada server di {args.host}:{args.port}. Pastikan server sudah jalan.")
+        return 1
+    except TimeoutError:                  # HARUS sebelum OSError (TimeoutError adalah subclass-nya)
+        print("\n[TIMEOUT] Server tidak merespons.")
+        return 1
+    except (KeyboardInterrupt, EOFError): # Ctrl+C, atau Ctrl+D saat input() di menu
+        print("\nKeluar.")
+    except OSError as exc:                # sisa kesalahan jaringan lain (mis. koneksi direset)
+        print(f"\n[KESALAHAN JARINGAN] {exc}")
+        return 1
+    finally:
+        # 6) Selalu tutup socket, apa pun yang terjadi di atas (hanya jika koneksi sempat terbentuk)
+        if client:
+            client.close()
+            print("Koneksi ditutup.")
+    return 0
+ 
+ 
+# SystemExit meneruskan return value main() sebagai exit code proses
+if __name__ == "__main__":
+    raise SystemExit(main())
