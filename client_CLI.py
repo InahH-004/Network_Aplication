@@ -1,5 +1,5 @@
 #----- Tampilan Pengguna interaktif (CLI) -------------------------------------------------------------
-"Versi Inah : revisi 2024-06-05: menu interaktif, input matriks, mode otomatis kirim request acak tiap delay detik"
+"Versi Inah : revisi 2026-09-29: menu interaktif, input matriks, mode otomatis kirim request acak tiap delay detik"
 
 def read_matrix() -> list:
     """Baca 3 baris x 3 angka. Fraction() dipakai sebagai validator (menerima 2, 1.5, 3/2)."""
