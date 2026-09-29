@@ -202,7 +202,7 @@ def run_main(client: Client):
         payload = {"matrix": read_matrix()} if svc == P.MATRIX else {"text": input("Teks : ")}
         client.call(svc, payload)
 
-def run_outo(client: Client, delay: float) :
+def run_auto(client: Client, delay: float) :
     """Mode otomatis: kirim request acak tiap `delay` detik, sampai server shutdown."""
     samples = ["Hello World", "KOMB JAYA", "DIKE To The World"
                "Pecinta  Jamu", "MIPA Alim", "Kopi \u2615 enak", ""]
