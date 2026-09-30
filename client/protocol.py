@@ -9,7 +9,7 @@ jangan diubah sendiri !
 import json
 
 ENCODING = "utf-8"
-DEFAULT_PORT = 5000
+DEFAULT_PORT = 5001
 MAX_MESSAGE_BYTES = 64 * 1024      
 
 #  Nama layanan (huruf kecil, sesuai server) 
